@@ -1,8 +1,9 @@
 from sqlalchemy import *
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import jenkins
 import datetime
+import jenkins
+
 
 Base = declarative_base()
 
@@ -20,15 +21,15 @@ def initializeDb():
     return session
 
 
-def addJob(session, jlist):
-    for j in jlist:
-        session.add(j)
+def addJob(session, myJobList):
+    for k in myJobList:
+        session.add(k)
     session.commit()
 
 
 def getLastJobId(session, name):
-    job = session.query(Jobs).filter_by(name=name).order_by(Jobs.jen_id.desc()).first()
-    if (job != None):
+    jobs = session.query(Jobs).filter_by(name=name).order_by(Jobs.jen_id.desc()).first()
+    if (jobs != None):
         return job.jen_id
     else:
         return None
@@ -47,23 +48,23 @@ class Jobs(Base):
 
 
 def createJobList(start, lastBuildNumber, jobName):
-    jList = []
-    for i in range(start + 1, lastBuildNumber + 1):
-        current = server.get_build_info(jobName, i)
+    myJobList = [] #This creates an array for my jobs
+    for n in range(start + 1, lastBuildNumber + 1):
+        current = server.get_build_info(jobName, n)
         current_as_jobs = Jobs()
         current_as_jobs.jen_id = current['id']
         current_as_jobs.building = current['building']
         current_as_jobs.estimatedDuration = current['estimatedDuration']
         current_as_jobs.name = jobName
         current_as_jobs.result = current['result']
-        current_as_jobs.timeStamp = datetime.datetime.fromtimestamp(long(current['timestamp']) * 0.001)
-        jList.append(current_as_jobs)
-    return jList
+        current_as_jobs.timeStamp = datetime.datetime.fromtimestamp(int(current['timestamp']) * 0.001)
+        myJobList.append(current_as_jobs)
+    return myJobList
 
 
 url = 'http://localhost:8080'
-username = raw_input('Enter username: ')
-password = raw_input('Enter password: ')
+username = input('Enter username: ') #input is used for python3.7
+password = input('Enter password: ')
 server = connectToJenkins(url, username, password)
 
 authenticated = false
@@ -80,21 +81,21 @@ if authenticated:
 
     # get a list of all jobs
     jobs = server.get_all_jobs()
-    for j in jobs:
-        jobName = j['name']  # get job name
+    for m in jobs:
+        jobName = m['name']  # This get my job name
         # print jobName
-        lastJobId = getLastJobId(session, jobName)  # get last locally stored job of this name
+        lastJobId = getLastJobId(session, jobName)  # Provide the last job Id.
         lastBuildNumber = server.get_job_info(jobName)['lastBuild'][
-            'number']  # get last build number from Jenkins for this job
+            'number']  # Gets the last build for the jobs as provided by Jenkins
 
         # if job not stored, update the db with all entries
         if lastJobId == None:
             start = 0
-        # if job exists, update the db with new entry
+        # if job exists, do an udpate to the database with this entry
         else:
             start = lastJobId
 
         # create a list of unlisted job objects
-        jlist = createJobList(start, lastBuildNumber, jobName)
+        myJobList = createJobList(start, lastBuildNumber, jobName)
         # add job to db
-        addJob(session, jlist)
+        addJob(session, myJobList)
