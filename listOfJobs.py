@@ -30,7 +30,7 @@ def addJob(session, myJobList):
 def getLastJobId(session, name):
     jobs = session.query(Jobs).filter_by(name=name).order_by(Jobs.jen_id.desc()).first()
     if (jobs != None):
-        return job.jen_id
+        return jobs.jen_id
     else:
         return None
 
